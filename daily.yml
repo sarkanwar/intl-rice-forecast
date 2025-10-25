@@ -1,0 +1,39 @@
+
+name: Daily intl rice fetch
+
+on:
+  schedule:
+    - cron: "30 22 * * *"   # 03:30 IST
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Fetch Yahoo
+        run: |
+          python - << 'PY'
+          from fetchers import fetch_yahoo_rough_rice
+          fetch_yahoo_rough_rice("data/rough_rice_yahoo.csv")
+          PY
+      - name: Fetch World Bank
+        run: |
+          python - << 'PY'
+          from fetchers import fetch_worldbank_pinksheet_rice
+          fetch_worldbank_pinksheet_rice("data/rice_wb_thai5.csv")
+          PY
+      - name: Commit artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*.csv || true
+          git commit -m "Auto update intl rice datasets [skip ci]" || echo "No changes"
+          git push
